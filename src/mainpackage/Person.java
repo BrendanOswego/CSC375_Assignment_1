@@ -47,7 +47,7 @@ class Person {
 	private int getDiff(int cardinal) {
 		int diff = 63 * 3;
 		Person neighbor = neighbors[cardinal];
-		if (neighbor != null || neighbor.getId() != -1) {
+		if (neighbor != null && neighbor.getId() != -1) {
 			int temp = 0;
 			temp += Math.abs(rgb[0] - neighbor.rgb[0]) +
 							Math.abs(rgb[1] - neighbor.rgb[1]) +

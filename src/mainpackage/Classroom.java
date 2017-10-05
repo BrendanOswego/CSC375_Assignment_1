@@ -7,28 +7,25 @@ import java.awt.*;
  * Affinity is based on difference between RGB Integer values,
  * the lower the affinity the better
  */
-class Classroom extends JComponent {
+class Classroom {
 
 	private Person[][] people;
 	private int rows;
 	private int cols;
 	private int affinity;
-	private JPanel panel;
 
-	Classroom(int rows, int cols, JPanel panel) {
+	Classroom(int rows, int cols) {
 		this.rows = rows;
 		this.cols = cols;
-		this.panel = panel;
 		people = new Person[rows][cols];
 		generatePopulation();
 		affinity = Utils.getInstance().calcAffinity(people, rows, cols);
 	}
 
-	Classroom(int rows, int cols, Person[][] people, JPanel panel) {
+	Classroom(int rows, int cols, Person[][] people) {
 		this.rows = rows;
 		this.cols = cols;
 		this.people = people;
-		this.panel = panel;
 		affinity = Utils.getInstance().calcAffinity(people, rows, cols);
 	}
 
@@ -48,6 +45,7 @@ class Classroom extends JComponent {
 	}
 
 	int getAffinity() {
+	    affinity = Utils.getInstance().calcAffinity(people, rows, cols);
 		return affinity;
 	}
 
@@ -63,21 +61,20 @@ class Classroom extends JComponent {
 		return people;
 	}
 
-	JPanel getPanel() {
-		return panel;
+	void setPeople (Person[][] people) {
+		this.people = people;
 	}
 
 	void draw(Graphics g, Person[][] temp) {
-		super.paintComponent(g);
-		int width = 50;
-		int height = 50;
+		int width = Utils.getInstance().getWidth();
+		int height = Utils.getInstance().getHeight();
 		int currentX = 0;
 		int currentY = 0;
-		for (int i = 0; i < temp.length; i++) {
-			for (int j = 0; j < temp[i].length; j++) {
+        for (int i = 0; i < rows; i++) {
+			for (int j = 0; j < cols; j++) {
 				Person p = temp[i][j];
 				int[] rgb = p.getRGB();
-				g.setColor(new Color(rgb[0], rgb[1], rgb[2]));
+                g.setColor(new Color(rgb[0], rgb[1], rgb[2]));
 				g.fillRect(currentX, currentY, width, height);
 				currentX += width;
 			}
@@ -85,5 +82,4 @@ class Classroom extends JComponent {
 			currentY += height;
 		}
 	}
-
 }
