@@ -1,55 +1,61 @@
 package mainpackage;
 
 import javax.swing.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Exchanger;
 
 public class CRunnable implements Runnable {
 
-	private Classroom best;
-	private final int iterations = 100;
-	private Utils utils;
-	private JPanel panel;
-	private volatile boolean shutdown = false;
-	private Exchanger<Classroom> exchanger;
+    private Classroom best;
+    private final int iterations = 50;
+    private Exchanger<Classroom> exchanger;
+    private static boolean shutdown = false;
+    private JPanel mainPanel;
+    private CountDownLatch latch;
 
-	CRunnable(Classroom classroom, Exchanger<Classroom> exchanger, JPanel panel) {
-		best = classroom;
-		this.panel = panel;
-		this.exchanger = exchanger;
-		utils = Utils.getInstance();
-	}
-
-	@Override
-	public void run() {
-        int currentIteration = 0;
-        Person[][] nextPeople;
-        Classroom nextClass;
-        while (currentIteration < iterations && !shutdown) {
-            if (utils.findDifferent(best.getPeople()) == 0) {
-                shutdown();
-            }
-            nextPeople = utils.rearrange(best.getPeople(), utils.getRows(), utils.getCols());
-            nextClass = new Classroom(best.getRows(), best.getCols(), nextPeople);
-            while (utils.findDifferent(nextClass.getPeople()) > utils.findDifferent(best.getPeople())) {
-                nextPeople = utils.rearrange(best.getPeople(), best.getRows(), best.getCols());
-                nextClass = new Classroom(best.getRows(), best.getCols(), nextPeople);
-            }
-            try {
-                best = exchanger.exchange(nextClass);
-                best.draw(panel.getGraphics(), best.getPeople());
-                Thread.sleep(200);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                Thread.currentThread().interrupt();
-            }
-            currentIteration++;
-        }
-        utils.getBestClasses().add(best);
-	}
-
-	private void shutdown() {
-	    shutdown = true;
+    CRunnable(Classroom classroom, Exchanger<Classroom> exchanger, CountDownLatch latch, JPanel mainPanel) {
+        best = classroom;
+        this.exchanger = exchanger;
+        this.mainPanel = mainPanel;
+        this.latch = latch;
     }
 
+    public void run() {
+        for (int i = 0; !shutdown && i < iterations; i++) {
+            Classroom temp = best;
+            if (Utils.getInstance().findDifferent(best.getPeople()) > 0) {
+                temp.setPeople(Utils.getInstance().rearrange(temp.getPeople()));
+                while (Utils.getInstance().calcAffinity(temp.getPeople())
+                        < Utils.getInstance().calcAffinity(best.getPeople())) {
+                    temp.setPeople(Utils.getInstance().rearrange(temp.getPeople()));
+                }
+                temp.draw(mainPanel.getGraphics());
+                best.setPeople(temp.getPeople());
+                exchange();
+            } else {
+                stop();
+            }
+        }
+        Utils.getInstance().setBest(best);
+        latch.countDown();
+    }
+
+    private void stop() {
+        try {
+            shutdown = true;
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void exchange() {
+        try {
+            best = exchanger.exchange(best);
+            Thread.sleep(200);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 
 }

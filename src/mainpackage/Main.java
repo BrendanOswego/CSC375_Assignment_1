@@ -2,62 +2,49 @@ package mainpackage;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.concurrent.Exchanger;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 public class Main {
 
-	public static void main(String[] args) {
-		SwingUtilities.invokeLater(() -> {
-			setup();
-		});
-	}
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                setup();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+    }
 
-	private static void setup() {
+    private static void setup() throws InterruptedException {
         Utils utils = Utils.getInstance();
-		int nThreads = 32;
-		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-		JFrame frame = new JFrame();
-		frame.setSize(new Dimension(700, 700));
-		frame.setLocation(dim.width/2-frame.getSize().width/2,
-				dim.height/2-frame.getSize().height/2);
-		JPanel mainPanel = new JPanel();
-		frame.setContentPane(mainPanel);
-		frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-		frame.setVisible(true);
-		Classroom classroom = new Classroom(utils.getRows(), utils.getCols());
-		ArrayList<Thread> threads = new ArrayList<>();
-		Exchanger<Classroom> exchanger = new Exchanger<>();
+        int nThreads = 256;
+        Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+        JFrame frame = new JFrame();
+        frame.setSize(new Dimension(900, 700));
+        frame.setLocation(dim.width / 2 - frame.getSize().width / 2, dim.height / 2 - frame.getSize().height / 2);
+        JPanel mainPanel = new JPanel();
+        frame.setContentPane(mainPanel);
+        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        frame.setVisible(true);
 
-		for (int i = 0; i < nThreads; i++) {
-			threads.add(new Thread(new CRunnable(classroom, exchanger, mainPanel)));
-		}
+        CountDownLatch latch = new CountDownLatch(1);
+        Classroom classroom = new Classroom(utils.getRows(), utils.getCols());
+        Exchanger<Classroom> exchanger = new Exchanger<>();
+        ExecutorService service = Executors.newFixedThreadPool(nThreads);
 
-		for (int i = 0; i < nThreads; i++) {
-			threads.get(i).start();
-		}
+        for (int i = 0; i < nThreads; i++) {
+            service.submit(new CRunnable(classroom, exchanger, latch, mainPanel));
+        }
 
-		for (int i = 0; i < nThreads; i++) {
-			try {
-				threads.get(i).join();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
-		ArrayList<Classroom> bestClasses = utils.getBestClasses();
-		Classroom best = bestClasses.get(0);
-		for (Classroom bestClass : bestClasses) {
-			if (best != bestClass && bestClass.getAffinity() < best.getAffinity()) {
-				best = bestClass;
-			}
-		}
-		System.out.println("Done with sorting");
+        latch.await();
+
+        System.out.println("Done");
+
         mainPanel.removeAll();
-		FinalPanel finalPanel = new FinalPanel(utils.getRows(), utils.getCols(), best.getPeople(), mainPanel);
-		mainPanel.add(finalPanel);
-		finalPanel.revalidate();
-	}
+        mainPanel.add(new FinalPanel(utils.getRows(), utils.getCols(), utils.getBest().getPeople(), mainPanel));
+        mainPanel.revalidate();
+        mainPanel.repaint();
+    }
 
 }

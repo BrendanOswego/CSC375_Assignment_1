@@ -22,7 +22,6 @@ public class FinalPanel extends JPanel {
         int height = Utils.getInstance().getHeight();
         int currentX = 0;
         int currentY = 0;
-        System.out.println();
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
                 Person p = people[i][j];
